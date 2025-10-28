@@ -9,3 +9,10 @@ function App() {
 }
 
 export default App
+
+/*
+Make a function return entire html inside a single element be it div, main, etc.
+Export that function.
+Default export lets you rename the function whatever you want during import and without use of any braces. 1 default export per file.
+Named exports makes you use braces during import and use the exact same name you exported with.
+*/
