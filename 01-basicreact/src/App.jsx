@@ -1,9 +1,11 @@
 function App() {
+  let myName = 'vikas'.toUpperCase()
+  // in the {} is the evaluated expression. meaning only evaluted JS can be written in it and not raw JS expression like control-flow, operations, etc.
 
   return (
     <main>
       <h1>Hello React</h1>
-      <p>I am Vikas and <mark>Vite</mark> lets me create react apps.</p>
+      <p>I am {myName} and <mark>Vite</mark> lets me create react apps.</p>
     </main>
   )
 }
