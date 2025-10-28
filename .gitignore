@@ -1,0 +1,3 @@
+# node_modules or node_modules/ ? The latter only ignores the directories with that name and the former ignores both files and directories of that name. Both works globally (root + within the sub-directories).
+# /node_modules Ignores only at the root of the repo
+node_modules
