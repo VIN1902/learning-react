@@ -44,6 +44,7 @@ in this render method, you may use StrictMode method of react, which provides a 
 inside render method you can only return one container which has all the html. use fragment tag => <> </> 
 */
 
+// when you render a React application, a tree of nodes that describes the app is generated and saved in memory.
 // const AnchorElement = React.createElement(
 //   'a',
 //   {
