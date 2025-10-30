@@ -177,7 +177,7 @@ So React can now “decide” when and how much to render, instead of blocking u
     - Uses fiber to create a new VDOM, diff it with previous one and decide minimal changes
     - Begins the 'render phase'.
 
-1. Renderer (react-dom, react-native)
+1. Renderer (react-dom (createRoot().render()), react-native)
     - Handles how React interacts with the host environment. 
     - Converts React’s abstract tree (the "virtual DOM" or equivalent) into real platform instructions (DOM, native views, canvas, etc).
     - Mount changes to host in 'commit phase'.
@@ -237,16 +237,17 @@ By how much the counter value change on a single button click?
 
 1. Batching: 
     - react says "All updates that happen inside this event handler are part of the same batch".
-1. State update queue: (inside hook)
+1. State update queue: <mark>( Hook Working )</mark>
+    - Hook returns the array of state variable and the setState method. setState method updates the state value.
     - Every hook (like useState) maintains an internal queue of pending updates.
     - Calculates the final state value by processing all the updates in that batch.
-        - Each setState (setCounter) adds an update to queue.
+        - Each setState (setCounter) method, adds an update to queue.
         - These updates are done in order.
-        - if a _value is passed_, then added update _replaces_ the previous one, to set next value of next state, & ultimately the final value.
-        - if a _function is passed_, then added update _derives_ from the previous one, to set value of next state, & ultimately the final value.
+        - In the setState method, if a _value is passed_, then added update _replaces_ the previous one, to set next value of state, & ultimately the final value.
+        - In the setState method, if a _function is passed_, then added update _derives_ from the previous one, to set value of next state, & ultimately the final value.
 1. Fiber:
-    - Executes and schedules the rendering work once final state is known.
-    - After final state to rendered is decided, React marks it for reconcilation, which is handled by fiber algorithm.
+    - Executes and schedules the rendering work once final state value is known.
+    - After final state value to be rendered is decided, React marks it for reconcilation, which is handled by fiber algorithm.
 
 ## Functional updates
 What if I want to add 3 value per button click and not this default behaviour?

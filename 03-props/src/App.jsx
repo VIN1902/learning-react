@@ -3,7 +3,7 @@ import "./App.css";
 import Card from './components/Card.jsx';
 
 function App() {
-  const [count, setCount] = useState(0);
+  const [count, setCount] = useState(0); // destructure the array returned
 
   let myObj = {
     age: 23,
