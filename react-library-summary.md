@@ -117,7 +117,22 @@ function Card({ username, age = 18 }) {
 }
 ```
 
-# Reconciliation & The Fiber Architecture (React’s Engine)
+# Reconciliation (reconciler)
+
+- Builds new virtual DOM trees.
+- Diffs them with old ones.
+- Determine the minimal changes needed to be made on real DOM.
+- Schedules commits to the real DOM.
+
+This whole process was synchronous. Further updates were blocked untill this update's reconciliation finishes.
+
+## Modern reconciliation
+- Old one (above steps) are reimplemented by fiber algorithm.
+- Now react, along with old steps, can also pause/resume/abort rendering between frames if the current update is expensive and schedule updates based on priority.
+
+Read the section below:
+
+# The Fiber Architecture
 
 - React Fiber is the reimplementation of the reconciler (the part that compares and updates virtual DOM trees).
 - React has two phases:
@@ -129,13 +144,12 @@ function Card({ username, age = 18 }) {
     - If your component tree was huge, React would block the main thread until reconciliation finished — causing jank or UI freezes. (updates were synchronous)
 
 1. Fiber’s Improvements
-    - React Fiber introduces a cooperative, interruptible work loop which are broken into small units.
+    - React Fiber introduces a cooperative, interruptible work loop which are broken into small units/batches.
 
 1. Key Capabilities:
-    - Incremental rendering – Break work into small chunks spread across multiple frames.
+    - Incremental rendering – Break work into small chunks/batches spread across multiple frames.
     - Prioritization – Urgent updates (like animations) can pause or preempt less urgent ones.
-    - Reusing and Aborting Work – Can cancel or reuse partially computed updates.
-    - Concurrency – React can prepare multiple versions of the UI in memory and choose which one to commit.
+    - Interruptible – Can cancel or reuse partially computed updates.
 
 1. So when state changes:
     - React creates a new fiber tree (the new VDOM).
@@ -148,18 +162,32 @@ So React can now “decide” when and how much to render, instead of blocking u
 
 # React Architecture
 
-1. Renderer (react-dom, react-native)
-    - create VDOM and render it to realDOM
-    - updates in UI trigger reconciliation
-1. Reconciler (fiber)
-    - uses fiber to create a new VDOM, diff it with previous one and decide minimal changes
-    - all of this can be interrupted by another update, where now scheduler kicks in
-1. Scheduler (prioritization engine)
-    - based on priority of updates, the render phase is finally handled and then in commit phase realDOM is changed.
-1. Dev API (component, hook, props)
-    - tools provided for above steps. compnonent is the thing that's going to be rendered, hooks trigger reconciliation, and so on.
+1. Devloper API Layer (component, hook, props, context)
+    - Everything you, the developer, use (tools) to talk to React.
+    - Component are the "what", Props and Context are "how data flows b/w components", Hooks are "Enqueuing updates" which go into reconciler.
+    - Trigger the reconciler.
 
-## HLD of lifecycle:
+1. Scheduler (prioritization engine)
+    - Decides when the work should be done.
+    - Based on priority of updates.
+    - Cooperation b/w changes based on priority, prevents blokcing renders. (when should reconciler run)
+
+1. Reconciler (powered by fiber)
+    - Figures out what needs to change.
+    - Uses fiber to create a new VDOM, diff it with previous one and decide minimal changes
+    - Begins the 'render phase'.
+
+1. Renderer (react-dom, react-native)
+    - Handles how React interacts with the host environment. 
+    - Converts React’s abstract tree (the "virtual DOM" or equivalent) into real platform instructions (DOM, native views, canvas, etc).
+    - Mount changes to host in 'commit phase'.
+
+what to render  
+when to render  
+how to compute diff  
+how to apply diff
+
+## HLD of react web lifecycle
 
 1. ReactDOM.createRoot() — create a root fiber connected to real DOM.
 1. render(<App />) — builds virtual DOM tree from JSX.
@@ -179,3 +207,58 @@ So React can now “decide” when and how much to render, instead of blocking u
 1. Fragments
     - You can’t return multiple root elements from a component.
     - Use a fragment (<>...</>) instead of a parent div.
+
+# Situation to observe React working nuance
+
+Say a basic react app is there where a state is being changed based on countUP/countDOWN buttons. (basic counter display)  
+addValue is the function that is increamenting the value triggered by some click event on a button.
+
+```jsx
+const [counter, setCounter] = useState(0)
+const addValue () {
+  setCounter(counter + 1)
+  setCounter(counter + 1)
+  setCounter(counter + 1)
+}
+```
+
+By how much the counter value change on a single button click?
+
+- setCounter is coming from hook and hooks trigger UI updation process.
+- React batches state updates, that occur within the same event (like a click).
+    - batching: collect multiple updates, before processing.
+- Hook's update queue, processes the final state by collapsing the similar/equivalent updates into one. After this reconciler renders that final state on DOM.
+- before fiber, reconciliation was synchronous meaning each UI updation event will block the next-in-line event until it finishes whole reconcilation process.
+- but now fiber, schedules and prioritizes these identical state replacements. Fiber’s contribution here is making this process interruptible and efficiently batched.
+- Therefore React, batches and merges updates based on their content and timing.
+- So, only the final setCounter is working and hence addValue will increment the value by only 1 and not 3 per button click.
+
+## Further clarification
+
+1. Batching: 
+    - react says "All updates that happen inside this event handler are part of the same batch".
+1. State update queue: (inside hook)
+    - Every hook (like useState) maintains an internal queue of pending updates.
+    - Calculates the final state value by processing all the updates in that batch.
+        - Each setState (setCounter) adds an update to queue.
+        - These updates are done in order.
+        - if a _value is passed_, then added update _replaces_ the previous one, to set next value of next state, & ultimately the final value.
+        - if a _function is passed_, then added update _derives_ from the previous one, to set value of next state, & ultimately the final value.
+1. Fiber:
+    - Executes and schedules the rendering work once final state is known.
+    - After final state to rendered is decided, React marks it for reconcilation, which is handled by fiber algorithm.
+
+## Functional updates
+What if I want to add 3 value per button click and not this default behaviour?
+
+- setCounter also accepts callbacks in arguments.
+- this callback takes in the previous value of state, for that 'wait' is introduced for reconciliation process to execute completly.
+
+```jsx
+const [counter, setCounter] = useState(0)
+const addValue () {
+  setCounter(prevCounter => prevCounter + 1)
+  setCounter(prevCounter => prevCounter + 1)
+  setCounter(prevCounter => prevCounter + 1)
+}
+```
